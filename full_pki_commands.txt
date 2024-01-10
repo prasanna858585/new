@@ -1,0 +1,21 @@
+key ca-
+openssl genrsa -aes256 -out private/ca.key.pem k4096
+ca cert-
+openssl req -config rootca.cnf -key private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem
+
+key subca-
+openssl genrsa -aes256 -out private/subca.key.pem 4096
+subca csr-
+openssl req -config subca.cnf -new -sha256 -key private/subca.key.pem -out csr/subca.csr.pem
+subca cert approved-
+openssl ca -config rootca.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in subca/csr/subca.csr.pem -out subca/certs/subca.cert.pem
+
+TLS certificate
+openssl genrsa -out www.shuhari.local.key.pem 2048
+
+openssl req -config subca.cnf -key www.shuhari.local.key.pem -new -sha256 -out www.shuhari.local.csr.pem
+
+openssl ca -config subca.cnf -extensions server_cert -days 365 -notext -md sha256 -in csr/www.shuhari.local.csr.pem -out certs/www.shuhari.local.cert.pem
+
+chain
+cat www---------.cert.pem subca.cert.pem ca.cert.pem > ca-subca-www-bundle.cert.pem

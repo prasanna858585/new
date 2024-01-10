@@ -1,0 +1,47 @@
+Basic Dns setup 
+sudo apt install openssl openssh bind9 dnsutils
+sudo nano /etc/hostname
+--Enter web in file
+sudo nano /etc/host
+--under local write web
+-under that write <ip> web.prasanna.com
+reboot
+cd /etc/bind
+sudo nano named.conf.options
+--remove -v6 from file
+sudo cp named.conf.default.zones name.conf.local
+zone 1: prasanna.com
+	-db.prasanna
+zone2: <ip>
+	db.IP
+
+
+
+####
+
+sudo apt install openssl apache2
+
+sudo a2enmod ssl
+sudo a2ensite default-ssl
+sudo mkdir /etc/apache2/ssl
+
+# create self sign certificate and private key
+
+openssl \
+req \
+-x509 \
+-nodes \
+-days 365 \
+-newkey \
+rsa:2048 \
+-keyout /etc/apache2/ssl/apache2.key \
+-out /etc/apache2/ssl/apache.cert
+
+cd /etc/apache2/sites-available/default_ssl.conf
+# add:-
+ServerName <IP/DNS>:443
+SSL CertificateFile /etc/apache2/ssl/apache.cert
+		    /etc/apache2/ssl/apache2.key
+sudo restart apache2
+browse IP 
+

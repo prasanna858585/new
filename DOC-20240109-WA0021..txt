@@ -1,0 +1,436 @@
+login as: shuhari
+shuhari@192.168.52.132's password:
+Linux debian 4.19.0-5-amd64 #1 SMP Debian 4.19.37-5 (2019-06-19) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+shuhari@debian:~$ cd /etc/bind
+shuhari@debian:/etc/bind$ ls
+bind.keys  db.127  db.empty  named.conf                named.conf.local    rndc.key
+db.0       db.255  db.local  named.conf.default-zones  named.conf.options  zones.rfc1918
+shuhari@debian:/etc/bind$ sudo cp named.conf.default-zones named.conf.local
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+[sudo] password for shuhari:
+shuhari@debian:/etc/bind$ sudo nano named.conf.local
+shuhari@debian:/etc/bind$ ls
+bind.keys  db.127  db.empty  named.conf                named.conf.local    rndc.key
+db.0       db.255  db.local  named.conf.default-zones  named.conf.options  zones.rfc1918
+shuhari@debian:/etc/bind$ sudo cp db.local db.rootca
+shuhari@debian:/etc/bind$ sudo cp db.local db.subca
+shuhari@debian:/etc/bind$ sudo cp db.local db.web
+shuhari@debian:/etc/bind$ sudo cp db.127 db.reverse
+shuhari@debian:/etc/bind$ sudo nano db.rootca
+shuhari@debian:/etc/bind$ sudo nano db.subca
+shuhari@debian:/etc/bind$ sudo nano db.subca
+shuhari@debian:/etc/bind$ sudo nano db.web
+shuhari@debian:/etc/bind$ sudo nano db.reverse
+shuhari@debian:/etc/bind$ sudo systemctl restart bind9
+shuhari@debian:/etc/bind$ sudo nano /etc/resolv.conf
+shuhari@debian:/etc/bind$ nslookup
+> rootca.shuhari.local
+Server:         192.168.52.132
+Address:        192.168.52.132#53
+
+Name:   rootca.shuhari.local
+Address: 127.0.0.1
+Name:   rootca.shuhari.local
+Address: 192.168.52.132
+Name:   rootca.shuhari.local
+Address: ::1
+> subca.shuhari.local
+Server:         192.168.52.132
+Address:        192.168.52.132#53
+
+Name:   subca.shuhari.local
+Address: 127.0.0.1
+Name:   subca.shuhari.local
+Address: 192.168.52.133
+Name:   subca.shuhari.local
+Address: ::1
+> web.shuhari.local
+Server:         192.168.52.132
+Address:        192.168.52.132#53
+
+Name:   web.shuhari.local
+Address: 127.0.0.1
+Name:   web.shuhari.local
+Address: 192.168.52.134
+Name:   web.shuhari.local
+Address: ::1
+> exit
+
+shuhari@debian:/etc/bind$ cd
+shuhari@debian:~$ cd ca
+shuhari@debian:~/ca$ mkdir -p certs crl newcerts private subca/csr subca/certs
+shuhari@debian:~/ca$ echo 1000 > serial
+shuhari@debian:~/ca$ echo 1000 > crlnumber
+shuhari@debian:~/ca$ chmod 700 private/
+shuhari@debian:~/ca$ touch index.txt index.txt.attr
+shuhari@debian:~/ca$ sudo nano /etc/vsftpd.conf
+shuhari@debian:~/ca$ sudo systemctl restart vsftpd
+shuhari@debian:~/ca$ cp ./../rootca.cnf .
+shuhari@debian:~/ca$ ls
+certs  crl  crlnumber  index.txt  index.txt.attr  newcerts  private  rootca.cnf  serial  subca
+shuhari@debian:~/ca$ nano rootca.cnf
+shuhari@debian:~/ca$ nano rootca.cnf
+shuhari@debian:~/ca$ openssl genrsa -aes256 -out private/ca.key.pem 4096
+Generating RSA private key, 4096 bit long modulus (2 primes)
+.........................................++++
+.....................................++++
+e is 65537 (0x010001)
+Enter pass phrase for private/ca.key.pem:
+Verifying - Enter pass phrase for private/ca.key.pem:
+shuhari@debian:~/ca$ chmod 400 private/ca.key.pem
+shuhari@debian:~/ca$ openssl req -config rootca.cnf -key private/ca.key.pem -new -x509 -days 7300 -sha256 -extensions v3_ca -out certs/ca.cert.pem
+Enter pass phrase for private/ca.key.pem:
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:IN
+State or Province Name [England]:MH
+Locality Name []:pune
+Organization Name [Alice Ltd]:IACSD
+Organizational Unit Name []:DITISS
+Common Name []:rootca
+Email Address []:iacsd@ditiss.com
+shuhari@debian:~/ca$ ls
+certs  crlnumber  index.txt.attr  private     serial  subca.csr.pem
+crl    index.txt  newcerts        rootca.cnf  subca
+shuhari@debian:~/ca$ openssl ca -config rootca.cnf -extensions v3_intermediate_ca -days 3650 -notext -md sha256 -in subca.csr.pem -out subca/certs/subca.cert.pem
+Using configuration from rootca.cnf
+Enter pass phrase for /home/shuhari/ca/private/ca.key.pem:
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 4096 (0x1000)
+        Validity
+            Not Before: Jan  9 14:21:12 2024 GMT
+            Not After : Jan  6 14:21:12 2034 GMT
+        Subject:
+            countryName               = IN
+            stateOrProvinceName       = MH
+            organizationName          = IACSD
+            organizationalUnitName    = DITISS
+            commonName                = subca
+            emailAddress              = iacsd@ditiss.com
+        X509v3 extensions:
+            X509v3 Subject Key Identifier:
+                D8:0D:36:0A:7A:A8:10:65:50:E2:34:0B:6A:C5:FE:C1:C1:92:16:B6
+            X509v3 Authority Key Identifier:
+                keyid:EE:C0:E0:FD:BE:17:15:E1:B1:6D:B2:F3:E9:9C:CA:EA:8A:AF:84:EA
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE, pathlen:0
+            X509v3 Key Usage: critical
+                Digital Signature, Certificate Sign, CRL Sign
+Certificate is to be certified until Jan  6 14:21:12 2034 GMT (3650 days)
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+shuhari@debian:~/ca$ scp subca/certs/subca.cert.pem shuhari@192.168.52.133:/home/shuhari/subca/
+The authenticity of host '192.168.52.133 (192.168.52.133)' can't be established.
+ECDSA key fingerprint is SHA256:hnWWqrYzFNCQFD0oqsJix9kVJAfiCg2OUmULupkIQiI.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.52.133' (ECDSA) to the list of known hosts.
+shuhari@192.168.52.133's password:
+subca.cert.pem                                                       100% 2069     1.5MB/s   00:00
+shuhari@debian:~/ca$ ls
+certs  crlnumber  index.txt.attr      index.txt.old  private     serial      subca
+crl    index.txt  index.txt.attr.old  newcerts       rootca.cnf  serial.old  subca.csr.pem
+shuhari@debian:~/ca$ scp subca/certs/subca.cert.pem shuhari@192.168.52.134:/home/shuhari/
+The authenticity of host '192.168.52.134 (192.168.52.134)' can't be established.
+ECDSA key fingerprint is SHA256:wRWnItxGH/K6AIw8JQ1zH8WEbOXo24Ko2kcsC2mO7L8.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.52.134' (ECDSA) to the list of known hosts.
+shuhari@192.168.52.134's password:
+subca.cert.pem                                                       100% 2069     2.7MB/s   00:00
+shuhari@debian:~/ca$ tree
+.
+├── certs
+│   └── ca.cert.pem
+├── crl
+├── crlnumber
+├── index.txt
+├── index.txt.attr
+├── index.txt.attr.old
+├── index.txt.old
+├── newcerts
+│   └── 1000.pem
+├── private
+│   └── ca.key.pem
+├── rootca.cnf
+├── serial
+├── serial.old
+├── subca
+│   ├── certs
+│   │   └── subca.cert.pem
+│   └── csr
+└── subca.csr.pem
+
+7 directories, 13 files
+shuhari@debian:~/ca$ scp /certs/ca.cert.pem shuhari@192.168.52.134:/home/shuhari
+shuhari@192.168.52.134's password:
+/certs/ca.cert.pem: No such file or directory
+shuhari@debian:~/ca$ scp certs/ca.cert.pem shuhari@192.168.52.134:/home/shuhari
+shuhari@192.168.52.134's password:
+ca.cert.pem                                                          100% 2110     1.4MB/s   00:00
+shuhari@debian:~/ca$ cd certs/
+shuhari@debian:~/ca/certs$ pwd
+/home/shuhari/ca/certs
+shuhari@debian:~/ca/certs$
+
+
+
+######################################################
+
+
+
+login as: shuhari
+shuhari@192.168.52.133's password:
+Linux debian 4.19.0-5-amd64 #1 SMP Debian 4.19.37-5 (2019-06-19) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+shuhari@debian:~$ ls
+subca
+shuhari@debian:~$ cd subca/
+shuhari@debian:~/subca$ mkdir certs crl csr newcerts private
+shuhari@debian:~/subca$ chmod 700 private/
+shuhari@debian:~/subca$ touch index.txt index.txt.attr
+shuhari@debian:~/subca$ echo 1000 > serial
+shuhari@debian:~/subca$ echo 1000 > crlnumber
+shuhari@debian:~/subca$ sudo nano /etc/vsftpd.conf
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+[sudo] password for shuhari:
+shuhari@debian:~/subca$ sudo systemctl restart vsftpd
+shuhari@debian:~/subca$ cp ./../subca.cnf .
+shuhari@debian:~/subca$ ls
+certs  crl  crlnumber  csr  index.txt  index.txt.attr  newcerts  private  serial  subca.cnf
+shuhari@debian:~/subca$ nano subca.cnf
+shuhari@debian:~/subca$ nano subca.cnf
+shuhari@debian:~/subca$ openssl genrsa -aes256 -out private/subca.key.pem 4096
+Generating RSA private key, 4096 bit long modulus (2 primes)
+....................................................................................................++++
+.....++++
+e is 65537 (0x010001)
+Enter pass phrase for private/subca.key.pem:
+Verifying - Enter pass phrase for private/subca.key.pem:
+shuhari@debian:~/subca$ chmod 400 private/subca.key.pem
+shuhari@debian:~/subca$ openssl req -config subca.cnf -new -sha256 -key private/subca.key.pem -out csr/subca.csr.pem
+Enter pass phrase for private/subca.key.pem:
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:IN
+State or Province Name [England]:MH
+Locality Name []:pune
+Organization Name [Alice Ltd]:IACSD
+Organizational Unit Name []:DITISS
+Common Name []:subca
+Email Address []:iacsd@ditiss.com
+shuhari@debian:~/subca$ scp csr/subca.csr.pem shuhari@192.168.52.132:/home/shuhari/ca/
+The authenticity of host '192.168.52.132 (192.168.52.132)' can't be established.
+ECDSA key fingerprint is SHA256:vAQ9Hf1kV8VYkF80fxhw0gaJM/hK55AQgs0+OgIcmiI.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.52.132' (ECDSA) to the list of known hosts.
+shuhari@192.168.52.132's password:
+subca.csr.pem                                                                                                                         100% 1724     2.3MB/s   00:00
+shuhari@debian:~/subca$ ls
+certs  crl  crlnumber  csr  index.txt  index.txt.attr  newcerts  private  serial  subca.cert.pem  subca.cnf
+shuhari@debian:~/subca$ mv subca.cert.pem certs/
+shuhari@debian:~/subca$ ls
+certs  crl  crlnumber  csr  index.txt  index.txt.attr  newcerts  private  serial  subca.cnf
+shuhari@debian:~/subca$ tree
+-bash: tree: command not found
+shuhari@debian:~/subca$ ls csr
+subca.csr.pem  web.shuhari.local.csr.pem
+shuhari@debian:~/subca$ openssl ca -config subca.cnf -extensions server_cert -days 375 -notext -md sha256 -in csr/web.shuhari.local.csr.pem -out certs/web.shuhari.local.cert.pem
+Using configuration from subca.cnf
+Enter pass phrase for /home/shuhari/subca/private/subca.key.pem:
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 4096 (0x1000)
+        Validity
+            Not Before: Jan  9 14:33:30 2024 GMT
+            Not After : Jan 18 14:33:30 2025 GMT
+        Subject:
+            countryName               = IN
+            stateOrProvinceName       = MH
+            localityName              = pune
+            organizationName          = IACSD
+            organizationalUnitName    = DITISS
+            commonName                = web.shuhari.local
+            emailAddress              = iacsd@ditiss.com
+        X509v3 extensions:
+            X509v3 Basic Constraints:
+                CA:FALSE
+            Netscape Cert Type:
+                SSL Server
+            Netscape Comment:
+                OpenSSL Generated Server Certificate
+            X509v3 Subject Key Identifier:
+                48:C3:DF:93:A7:80:E3:D9:E5:70:89:40:88:40:22:92:3F:9E:DA:9F
+            X509v3 Authority Key Identifier:
+                keyid:D8:0D:36:0A:7A:A8:10:65:50:E2:34:0B:6A:C5:FE:C1:C1:92:16:B6
+                DirName:/C=IN/ST=MH/L=pune/O=IACSD/OU=DITISS/CN=rootca/emailAddress=iacsd@ditiss.com
+                serial:10:00
+
+            X509v3 Key Usage: critical
+                Digital Signature, Key Encipherment
+            X509v3 Extended Key Usage:
+                TLS Web Server Authentication
+            X509v3 Subject Alternative Name:
+                DNS:*.shuhari.local
+Certificate is to be certified until Jan 18 14:33:30 2025 GMT (375 days)
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+shuhari@debian:~/subca$ scp certs/web.shuhari.local.cert.pem shuhari@192.168.52.134:/home/shuhari
+The authenticity of host '192.168.52.134 (192.168.52.134)' can't be established.
+ECDSA key fingerprint is SHA256:wRWnItxGH/K6AIw8JQ1zH8WEbOXo24Ko2kcsC2mO7L8.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.52.134' (ECDSA) to the list of known hosts.
+shuhari@192.168.52.134's password:
+web.shuhari.local.cert.pem                                                                                                            100% 2082     2.7MB/s   00:00
+shuhari@debian:~/subca$
+
+
+
+######################################################################
+
+
+
+login as: shuhari
+shuhari@192.168.52.134's password:
+Linux debian 4.19.0-5-amd64 #1 SMP Debian 4.19.37-5 (2019-06-19) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+shuhari@debian:~$ ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group defaul                                                                                        t qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: ens33: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP g                                                                                        roup default qlen 1000
+    link/ether 00:0c:29:ef:7e:9d brd ff:ff:ff:ff:ff:ff
+    inet 192.168.52.134/24 brd 192.168.52.255 scope global dynamic ens33
+       valid_lft 1404sec preferred_lft 1404sec
+    inet6 fe80::20c:29ff:feef:7e9d/64 scope link
+       valid_lft forever preferred_lft forever
+shuhari@debian:~$ ls
+certs
+shuhari@debian:~$ cd certs/
+shuhari@debian:~/certs$ sudo nano /etc/vsftpd.conf
+
+We trust you have received the usual lecture from the local System
+Administrator. It usually boils down to these three things:
+
+    #1) Respect the privacy of others.
+    #2) Think before you type.
+    #3) With great power comes great responsibility.
+
+[sudo] password for shuhari:
+shuhari@debian:~/certs$ sudo systemctl restart vsftpd
+shuhari@debian:~/certs$ openssl genrsa -out web.shuhari.local.key.pem 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+.........................+++++
+............................................................+++++
+e is 65537 (0x010001)
+shuhari@debian:~/certs$ openssl req -config ./../subca.cnf -key web.shuhari.local.key.pem -new -sha256 -out web.shuhari.local.csr.pem
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [GB]:IN
+State or Province Name [England]:MH
+Locality Name []:pune
+Organization Name [Alice Ltd]:IACSD
+Organizational Unit Name []:DITISS
+Common Name []:web.shuhari.local
+Email Address []:iacsd@ditiss.com
+shuhari@debian:~/certs$ scp web.shuhari.local.csr.pem shuhari@192.168.52.133:/home/shuhari/subca/csr
+The authenticity of host '192.168.52.133 (192.168.52.133)' can't be established.
+ECDSA key fingerprint is SHA256:hnWWqrYzFNCQFD0oqsJix9kVJAfiCg2OUmULupkIQiI.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.52.133' (ECDSA) to the list of known hosts.
+shuhari@192.168.52.133's password:
+web.shuhari.local.csr.pem                                                                                                             100% 1050   819.4KB/s   00:00
+shuhari@debian:~/certs$ ls ..
+certs  subca.cert.pem  subca.cnf  web.shuhari.local.cert.pem
+shuhari@debian:~/certs$ ls ..
+ca.cert.pem  certs  subca.cert.pem  subca.cnf  web.shuhari.local.cert.pem
+shuhari@debian:~/certs$ cd
+shuhari@debian:~$ cat web.shuhari.local.cert.pem subca.cert.pem ca.cert.pem > ca-subca-web-bundle.cert.pem
+shuhari@debian:~$ sudo mkdir /etc/apache2/ssl
+shuhari@debian:~$ sudo cp ca-subca-web-bundle.cert.pem /etc/apache2/ssl
+shuhari@debian:~$ sudo cp certs/web.shuhari.local.key.pem /etc/apache2/ssl
+shuhari@debian:~$ sudo a2enmod ssl
+Considering dependency setenvif for ssl:
+Module setenvif already enabled
+Considering dependency mime for ssl:
+Module mime already enabled
+Considering dependency socache_shmcb for ssl:
+Enabling module socache_shmcb.
+Enabling module ssl.
+See /usr/share/doc/apache2/README.Debian.gz on how to configure SSL and create self-signed certificates.
+To activate the new configuration, you need to run:
+  systemctl restart apache2
+shuhari@debian:~$ sudo a2ensite default-ssl
+Enabling site default-ssl.
+To activate the new configuration, you need to run:
+  systemctl reload apache2
+shuhari@debian:~$ sudo nano /etc/apache2/sites-available/default-ssl.conf
+shuhari@debian:~$ sudo nano /etc/apache2/sites-available/default-ssl.conf
+shuhari@debian:~$ sudo nano /var/www/html/index.html
+shuhari@debian:~$ sudo rm /var/www/html/index.html
+shuhari@debian:~$ sudo nano /var/www/html/index.html
+shuhari@debian:~$ sudo systemctl restart apache2
+shuhari@debian:~$
+
+
